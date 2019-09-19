@@ -2,6 +2,7 @@ from typing import *
 
 import pyglet
 import random
+import datetime
 
 BLOCK_SIZE = 30
 ROWS = 20
@@ -10,11 +11,19 @@ COLUMNS = 10
 FPS = 2
 
 
+def write_score_to_file():
+    name = input('Write your name here: ')
+    with open('highscores.txt', 'a') as f:
+        print(datetime.datetime.now(), name, game.rows_cleared, file=f)
+
+
+
 class Game:
     def __init__(self):
         self.block = None
         self.board = [[False for _ in range(COLUMNS)] for _ in range(ROWS)]
         self.set_random_block_as_active()
+        self.rows_cleared = 0
 
     def update(self, dt):
         if any(self.board[-2]):
@@ -36,6 +45,7 @@ class Game:
 
             while len(new_board) < ROWS:
                 new_board.append([False for _ in range(COLUMNS)])
+                self.rows_cleared += 1
 
             self.board = new_board
         else:
@@ -215,3 +225,5 @@ def on_key_press(key, mod):
 
 # Run the game
 pyglet.app.run()
+
+write_score_to_file()
