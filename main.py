@@ -11,14 +11,22 @@ COLUMNS = 10
 FPS = 2
 
 
-def write_score_to_file():
-    name = input('Write your name here: ')
+def draw_rect(x, y):
+    pyglet.graphics.draw(4,
+                         pyglet.gl.GL_QUADS,
+                         ('v2i', (x * BLOCK_SIZE, y * BLOCK_SIZE,
+                                  x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
+                                  (x + 1) * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
+                                  (x + 1) * BLOCK_SIZE, y * BLOCK_SIZE)))
+
+
+def write_score_to_file(name):
     with open('highscores.txt', 'a') as f:
         print(datetime.datetime.now(), name, game.rows_cleared, file=f)
 
 
-
 class Game:
+
     def __init__(self):
         self.block = None
         self.board = [[False for _ in range(COLUMNS)] for _ in range(ROWS)]
@@ -78,6 +86,7 @@ class Game:
 class Block:
     x: int
     y: int
+
     squares: List[Tuple[int, int]]
 
     def __init__(self, *squares):
@@ -124,6 +133,8 @@ class Block:
                 break
 
 
+name = input('Write your name here: ')
+
 blocks = [
     # O
     ((0, 0),
@@ -167,9 +178,10 @@ blocks = [
      (1, 0),
      (0, 1)),
 ]
-game = Game()
 
+game = Game()
 # Game window
+
 window = pyglet.window.Window(
     width=BLOCK_SIZE * COLUMNS,
     height=BLOCK_SIZE * ROWS
@@ -179,30 +191,18 @@ pyglet.clock.schedule_interval(game.update, 1 / FPS)
 
 
 # Events handlers
+
+
 @window.event
 def on_draw():
     window.clear()
     for y, row in enumerate(game.board):
         for x, block in enumerate(row):
             if block:
-                pyglet.graphics.draw(4,
-                                     pyglet.gl.GL_QUADS,
-                                     ('v2i', (x * BLOCK_SIZE, y * BLOCK_SIZE,
-                                              x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
-                                              (x + 1) * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
-                                              (x + 1) * BLOCK_SIZE, y * BLOCK_SIZE)))
+                draw_rect(x, y)
 
     for x, y in game.block.squares:
-        block_left = (x + game.block.x) * BLOCK_SIZE
-        block_right = block_left + BLOCK_SIZE
-        block_top = (y + game.block.y) * BLOCK_SIZE
-        block_bottom = block_top + BLOCK_SIZE
-        pyglet.graphics.draw(4,
-                             pyglet.gl.GL_QUADS,
-                             ('v2i', (block_left, block_top,
-                                      block_left, block_bottom,
-                                      block_right, block_bottom,
-                                      block_right, block_top)))
+        draw_rect(x + game.block.x, y + game.block.y)
 
 
 @window.event
@@ -226,4 +226,4 @@ def on_key_press(key, mod):
 # Run the game
 pyglet.app.run()
 
-write_score_to_file()
+write_score_to_file(name)
