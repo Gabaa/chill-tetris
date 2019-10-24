@@ -27,10 +27,12 @@ def write_score_to_file(name):
 
 class Game:
     def __init__(self):
+        self.block_factory = BlockFactory()
         self.block = None
         self.board = [[False for _ in range(COLUMNS)] for _ in range(ROWS)]
-        self.set_random_block_as_active()
         self.rows_cleared = 0
+
+        self.set_random_block_as_active()
 
     def update(self, dt):
         if any(self.board[-2]):
@@ -79,7 +81,56 @@ class Game:
                 self.board[self.block.y + y][self.block.x + x] = True
 
     def set_random_block_as_active(self):
-        self.block = Block(*random.choice(blocks))
+        self.block = self.block_factory.create_random_block()
+
+
+class BlockFactory:
+    blocks = [
+        # O
+        ((0, 0),
+         (1, 0),
+         (0, 1),
+         (1, 1)),
+
+        # I
+        ((0, -1),
+         (0, 0),
+         (0, 1),
+         (0, 2)),
+
+        # L
+        ((1, -1),
+         (0, -1),
+         (0, 0),
+         (0, 1)),
+
+        # J
+        ((-1, -1),
+         (0, -1),
+         (0, 0),
+         (0, 1)),
+
+        # S
+        ((-1, -1),
+         (0, -1),
+         (0, 0),
+         (1, 0)),
+
+        # Z
+        ((1, -1),
+         (0, -1),
+         (0, 0),
+         (-1, 0)),
+
+        # T
+        ((-1, 0),
+         (0, 0),
+         (1, 0),
+         (0, 1)),
+    ]
+
+    def create_random_block(self):
+        return Block(*random.choice(self.blocks))
 
 
 class Block:
@@ -132,51 +183,7 @@ class Block:
                 break
 
 
-name = input('Write your name here: ')
-
-blocks = [
-    # O
-    ((0, 0),
-     (1, 0),
-     (0, 1),
-     (1, 1)),
-
-    # I
-    ((0, -1),
-     (0, 0),
-     (0, 1),
-     (0, 2)),
-
-    # L
-    ((1, -1),
-     (0, -1),
-     (0, 0),
-     (0, 1)),
-
-    # J
-    ((-1, -1),
-     (0, -1),
-     (0, 0),
-     (0, 1)),
-
-    # S
-    ((-1, -1),
-     (0, -1),
-     (0, 0),
-     (1, 0)),
-
-    # Z
-    ((1, -1),
-     (0, -1),
-     (0, 0),
-     (-1, 0)),
-
-    # T
-    ((-1, 0),
-     (0, 0),
-     (1, 0),
-     (0, 1)),
-]
+player_name = input('Write your name here: ')
 
 game = Game()
 
@@ -223,4 +230,4 @@ def on_key_press(key, mod):
 # Run the game
 pyglet.app.run()
 
-write_score_to_file(name)
+write_score_to_file(player_name)
