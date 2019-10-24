@@ -26,7 +26,6 @@ def write_score_to_file(name):
 
 
 class Game:
-
     def __init__(self):
         self.block = None
         self.board = [[False for _ in range(COLUMNS)] for _ in range(ROWS)]
@@ -180,8 +179,8 @@ blocks = [
 ]
 
 game = Game()
-# Game window
 
+# Game window
 window = pyglet.window.Window(
     width=BLOCK_SIZE * COLUMNS,
     height=BLOCK_SIZE * ROWS
@@ -191,8 +190,6 @@ pyglet.clock.schedule_interval(game.update, 1 / FPS)
 
 
 # Events handlers
-
-
 @window.event
 def on_draw():
     window.clear()
