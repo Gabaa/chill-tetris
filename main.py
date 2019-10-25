@@ -8,6 +8,8 @@ BLOCK_SIZE = 30
 ROWS = 20
 COLUMNS = 10
 
+RIGHT_OFFSET = 7
+
 FPS = 2
 
 
@@ -95,6 +97,9 @@ class Block:
             game.update(0)
             if will_hit:
                 break
+
+        pyglet.clock.unschedule(game.update)
+        pyglet.clock.schedule_interval(game.update, 1 / FPS)
 
 
 class BlockFactory:
@@ -203,11 +208,17 @@ class EndScreen:
 
 class Game:
     block_factory: BlockFactory
+
     active_block: Block
+
     saved_block: Optional[Block]
     saved: bool
+
     board: List[List[Optional[Tuple[int, int, int]]]]
+
     rows_cleared: int
+    score_label: pyglet.text.Label
+
     end_screen: Optional[EndScreen]
 
     def __init__(self):
@@ -217,6 +228,11 @@ class Game:
         self.saved = False
         self.board = [[None for _ in range(COLUMNS)] for _ in range(ROWS)]
         self.rows_cleared = 0
+        self.score_label = pyglet.text.Label(f'Score: {self.rows_cleared}',
+                                             x=BLOCK_SIZE * (COLUMNS + (RIGHT_OFFSET / 2)),
+                                             y=BLOCK_SIZE * (ROWS - 3),
+                                             anchor_x='center', anchor_y='center',
+                                             font_size=20)
         self.end_screen = None
 
     def draw(self):
@@ -235,6 +251,8 @@ class Game:
 
             # draw grid
             draw_grid()
+
+            self.score_label.draw()
 
         else:
             self.end_screen.draw()
@@ -282,12 +300,17 @@ class Game:
                 new_board.append([None for _ in range(COLUMNS)])
                 self.rows_cleared += 1
 
+            self.update_score()
+
             self.board = new_board
         else:
             self.active_block.y -= 1
 
         if any(self.board[-2]):
             self.end_game()
+
+    def update_score(self):
+        self.score_label.text = f'Score: {self.rows_cleared}'
 
     def end_game(self):
         self.end_screen = EndScreen(window, self.rows_cleared)
@@ -327,7 +350,7 @@ class Game:
 game = Game()
 
 # Game window
-window = pyglet.window.Window(width=BLOCK_SIZE * (COLUMNS + 7),
+window = pyglet.window.Window(width=BLOCK_SIZE * (COLUMNS + RIGHT_OFFSET),
                               height=BLOCK_SIZE * ROWS)
 
 pyglet.clock.schedule_interval(game.update, 1 / FPS)
