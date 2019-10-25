@@ -53,11 +53,13 @@ class Block:
     def __init__(self, squares, color):
         self.squares = list(squares)
         self.color = color
+        self.x, self.y = self.get_starting_position()
 
+    def get_starting_position(self):
         ylist = [y for x, y in self.squares]
-
-        self.x = COLUMNS // 2 - 1
-        self.y = ROWS - max(ylist) - 1
+        x = COLUMNS // 2 - 1
+        y = ROWS - max(ylist) - 1
+        return x, y
 
     def rotate(self, clockwise: bool):
         # get squares after rotation
@@ -203,21 +205,22 @@ class Game:
     block_factory: BlockFactory
     active_block: Block
     saved_block: Optional[Block]
+    saved: bool
     board: List[List[Optional[Tuple[int, int, int]]]]
     rows_cleared: int
-    ended: bool
-    end_screen: EndScreen
+    end_screen: Optional[EndScreen]
 
     def __init__(self):
         self.block_factory = BlockFactory()
         self.active_block = self.block_factory.create_random_block()
-        self.saved_block = None
+        self.saved_block = self.block_factory.create_random_block()
+        self.saved = False
         self.board = [[None for _ in range(COLUMNS)] for _ in range(ROWS)]
         self.rows_cleared = 0
-        self.ended = False
+        self.end_screen = None
 
     def draw(self):
-        if not self.ended:
+        if self.end_screen is None:
             for y, row in enumerate(self.board):
                 for x, color in enumerate(row):
                     if color is not None:
@@ -228,7 +231,7 @@ class Game:
 
             if self.saved_block:
                 for x, y in self.saved_block.squares:
-                    draw_rect(BLOCK_SIZE * COLUMNS + x * BLOCK_SIZE + 100, y * BLOCK_SIZE + 100, self.saved_block.color)
+                    draw_rect(COLUMNS + x + 3, y + 4, self.saved_block.color)
 
             # draw grid
             draw_grid()
@@ -237,7 +240,7 @@ class Game:
             self.end_screen.draw()
 
     def on_key_press(self, key, mod):
-        if self.ended:
+        if self.end_screen:
             self.end_screen.on_key_press(key, mod)
             return
 
@@ -254,10 +257,10 @@ class Game:
         elif key == pyglet.window.key.X:
             self.active_block.rotate(False)
         elif key == pyglet.window.key.C:
-            self.active_block.rotate(True)
+            self.save_block()
 
     def on_text(self, text):
-        if self.ended:
+        if self.end_screen:
             self.end_screen.on_text(text)
 
     def update(self, dt):
@@ -267,7 +270,7 @@ class Game:
                 hit = True
                 break
         if hit:
-            self.place_block(self.active_block.color)
+            self.place_block()
             self.active_block = self.block_factory.create_random_block()
 
             new_board = []
@@ -287,7 +290,6 @@ class Game:
             self.end_game()
 
     def end_game(self):
-        self.ended = True
         self.end_screen = EndScreen(window, self.rows_cleared)
         pyglet.clock.unschedule(self.update)
 
@@ -306,17 +308,26 @@ class Game:
         if not hit:
             self.active_block.x += dx
 
-    def place_block(self, color):
+    def place_block(self):
         for x, y in self.active_block.squares:
             if self.active_block.y + y < len(self.board) and self.active_block.x + x < len(
                     self.board[self.active_block.y + y]):
-                self.board[self.active_block.y + y][self.active_block.x + x] = color
+                self.board[self.active_block.y + y][self.active_block.x + x] = self.active_block.color
+        self.saved = False
+
+    def save_block(self):
+        if not self.saved:
+            temp = self.saved_block
+            self.saved_block = self.active_block
+            self.saved_block.x, self.saved_block.y = self.saved_block.get_starting_position()
+            self.active_block = temp
+            self.saved = True
 
 
 game = Game()
 
 # Game window
-window = pyglet.window.Window(width=BLOCK_SIZE * COLUMNS + 200,
+window = pyglet.window.Window(width=BLOCK_SIZE * (COLUMNS + 7),
                               height=BLOCK_SIZE * ROWS)
 
 pyglet.clock.schedule_interval(game.update, 1 / FPS)
