@@ -1,1 +1,2 @@
 - Add previous high scores to end screen
+  - Have "ALL TIME HIGH" and "LAST 50 HIGH" side by side
