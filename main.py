@@ -11,13 +11,14 @@ COLUMNS = 10
 FPS = 2
 
 
-def draw_rect(x, y):
+def draw_rect(x, y, color):
     pyglet.graphics.draw(4,
                          pyglet.gl.GL_QUADS,
                          ('v2i', (x * BLOCK_SIZE, y * BLOCK_SIZE,
                                   x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
                                   (x + 1) * BLOCK_SIZE, (y + 1) * BLOCK_SIZE,
-                                  (x + 1) * BLOCK_SIZE, y * BLOCK_SIZE)))
+                                  (x + 1) * BLOCK_SIZE, y * BLOCK_SIZE)),
+                         ('c3B', (color * 4)))
 
 
 def draw_gridline(startpoint, endpoint):
@@ -46,7 +47,7 @@ class Game:
     def __init__(self):
         self.block_factory = BlockFactory()
         self.block = None
-        self.board = [[False for _ in range(COLUMNS)] for _ in range(ROWS)]
+        self.board = [[None for _ in range(COLUMNS)] for _ in range(ROWS)]
         self.rows_cleared = 0
 
         self.set_random_block_as_active()
@@ -61,7 +62,7 @@ class Game:
                 hit = True
                 break
         if hit:
-            self.place_block()
+            self.place_block(self.block.color)
             self.set_random_block_as_active()
 
             new_board = []
@@ -92,10 +93,10 @@ class Game:
         if not hit:
             self.block.x += dx
 
-    def place_block(self):
+    def place_block(self, color):
         for x, y in self.block.squares:
             if self.block.y + y < len(self.board) and self.block.x + x < len(self.board[self.block.y + y]):
-                self.board[self.block.y + y][self.block.x + x] = True
+                self.board[self.block.y + y][self.block.x + x] = color
 
     def set_random_block_as_active(self):
         self.block = self.block_factory.create_random_block()
@@ -146,8 +147,16 @@ class BlockFactory:
          (0, 1)),
     ]
 
+    colors = [
+        (255, 0, 0),
+        (0, 255, 255),
+        (0, 255, 0),
+        (0, 0, 255),
+        (255, 0, 255)
+    ]
+
     def create_random_block(self):
-        return Block(*random.choice(self.blocks))
+        return Block(random.choice(self.blocks), random.choice(self.colors))
 
 
 class Block:
@@ -155,9 +164,11 @@ class Block:
     y: int
 
     squares: List[Tuple[int, int]]
+    color: Tuple[int, int, int]
 
-    def __init__(self, *squares):
+    def __init__(self, squares, color):
         self.squares = list(squares)
+        self.color = color
 
         ylist = [y for x, y in self.squares]
 
@@ -218,12 +229,12 @@ pyglet.clock.schedule_interval(game.update, 1 / FPS)
 def on_draw():
     window.clear()
     for y, row in enumerate(game.board):
-        for x, block in enumerate(row):
-            if block:
-                draw_rect(x, y)
+        for x, color in enumerate(row):
+            if color:
+                draw_rect(x, y, color)
 
     for x, y in game.block.squares:
-        draw_rect(x + game.block.x, y + game.block.y)
+        draw_rect(x + game.block.x, y + game.block.y, game.block.color)
 
     # draw grid
     draw_grid()
