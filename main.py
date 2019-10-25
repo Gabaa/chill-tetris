@@ -193,7 +193,6 @@ class EndScreen:
     def on_text(self, text):
         if text.lower() in 'abcdefghijklmnopqrstuvwxyzæøå':
             self.name_label.text += text
-            print(self.name_label.text)
 
 
 class Game:
