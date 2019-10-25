@@ -141,15 +141,19 @@ class BlockFactory:
     ]
 
     colors = [
-        (255, 0, 0),
+        # O I L J S Z T
+        (255, 255, 0),
         (0, 255, 255),
-        (0, 255, 0),
+        (255, 150, 0),
         (0, 0, 255),
-        (255, 0, 255)
+        (255, 0, 0),
+        (0, 255, 0),
+        (200, 0, 200)
     ]
 
     def create_random_block(self):
-        return Block(random.choice(self.blocks), random.choice(self.colors))
+        i = random.randint(0, 6)
+        return Block(self.blocks[i], self.colors[i])
 
 
 class EndScreen:
