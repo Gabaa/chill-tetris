@@ -20,6 +20,23 @@ def draw_rect(x, y):
                                   (x + 1) * BLOCK_SIZE, y * BLOCK_SIZE)))
 
 
+def draw_gridline(startpoint, endpoint):
+    x0, y0 = startpoint
+    x1, y1 = endpoint
+
+    pyglet.graphics.draw(2, pyglet.gl.GL_LINES,
+                         ('v2i', (x0, y0, x1, y1)),
+                         ('c3B', (80, 80, 80) * 2))
+
+
+def draw_grid():
+    for x in range(1, COLUMNS):
+        draw_gridline((x * BLOCK_SIZE, 0), (x * BLOCK_SIZE, BLOCK_SIZE * ROWS))
+
+    for y in range(1, ROWS):
+        draw_gridline((0, y * BLOCK_SIZE), (BLOCK_SIZE * COLUMNS, y * BLOCK_SIZE))
+
+
 def write_score_to_file(name):
     with open('highscores.txt', 'a') as f:
         print(datetime.datetime.now(), name, game.rows_cleared, file=f)
@@ -207,6 +224,9 @@ def on_draw():
 
     for x, y in game.block.squares:
         draw_rect(x + game.block.x, y + game.block.y)
+
+    # draw grid
+    draw_grid()
 
 
 @window.event
