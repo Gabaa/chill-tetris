@@ -211,8 +211,10 @@ class Game:
 
     active_block: Block
 
-    saved_block: Optional[Block]
-    saved: bool
+    next_block: Block
+
+    swap_block: Optional[Block]
+    swapped: bool
 
     board: List[List[Optional[Tuple[int, int, int]]]]
 
@@ -224,8 +226,9 @@ class Game:
     def __init__(self):
         self.block_factory = BlockFactory()
         self.active_block = self.block_factory.create_random_block()
-        self.saved_block = self.block_factory.create_random_block()
-        self.saved = False
+        self.next_block = self.block_factory.create_random_block()
+        self.swap_block = self.block_factory.create_random_block()
+        self.swapped = False
         self.board = [[None for _ in range(COLUMNS)] for _ in range(ROWS)]
         self.rows_cleared = 0
         self.score_label = pyglet.text.Label(f'Score: {self.rows_cleared}',
@@ -245,9 +248,12 @@ class Game:
             for x, y in self.active_block.squares:
                 draw_rect(x + self.active_block.x, y + self.active_block.y, self.active_block.color)
 
-            if self.saved_block:
-                for x, y in self.saved_block.squares:
-                    draw_rect(COLUMNS + x + 3, y + 4, self.saved_block.color)
+            if self.swap_block:
+                for x, y in self.swap_block.squares:
+                    draw_rect(COLUMNS + x + 3, y + 4, self.swap_block.color)
+
+            for x, y in self.next_block.squares:
+                draw_rect(COLUMNS + x + 3, y + 10, self.next_block.color)
 
             # draw grid
             draw_grid()
@@ -289,7 +295,8 @@ class Game:
                 break
         if hit:
             self.place_block()
-            self.active_block = self.block_factory.create_random_block()
+            self.active_block = self.next_block
+            self.next_block = self.block_factory.create_random_block()
 
             new_board = []
             for row in self.board:
@@ -336,15 +343,15 @@ class Game:
             if self.active_block.y + y < len(self.board) and self.active_block.x + x < len(
                     self.board[self.active_block.y + y]):
                 self.board[self.active_block.y + y][self.active_block.x + x] = self.active_block.color
-        self.saved = False
+        self.swapped = False
 
     def save_block(self):
-        if not self.saved:
-            temp = self.saved_block
-            self.saved_block = self.active_block
-            self.saved_block.x, self.saved_block.y = self.saved_block.get_starting_position()
+        if not self.swapped:
+            temp = self.swap_block
+            self.swap_block = self.active_block
+            self.swap_block.x, self.swap_block.y = self.swap_block.get_starting_position()
             self.active_block = temp
-            self.saved = True
+            self.swapped = True
 
 
 game = Game()
