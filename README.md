@@ -1,5 +1,6 @@
 # chill-tetris
 
 ## Requirements
-  - Python 3
-  - pyglet
+
+- Python 3
+- pyglet
