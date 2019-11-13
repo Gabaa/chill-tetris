@@ -213,7 +213,7 @@ class Game:
 
     next_block: Block
 
-    swap_block: Optional[Block]
+    swap_block: Block
     swapped: bool
 
     board: List[List[Optional[Tuple[int, int, int]]]]
