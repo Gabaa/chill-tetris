@@ -42,7 +42,7 @@ def draw_grid():
 
 def write_score_to_file(name):
     with open('highscores.txt', 'a') as f:
-        print(datetime.datetime.now(), name, game.rows_cleared, file=f)
+        print(datetime.datetime.now(), name, window.rows_cleared, file=f)
 
 
 class Block:
@@ -78,7 +78,7 @@ class Block:
         for x, y in new_squares:
             new_x = self.x + x
             new_y = self.y + y
-            if not (0 <= new_x < COLUMNS and 0 <= new_y < ROWS and not game.board[new_y][new_x]):
+            if not (0 <= new_x < COLUMNS and 0 <= new_y < ROWS and not window.board[new_y][new_x]):
                 all_inside = False
 
         # if they are inside, set as the new block
@@ -91,15 +91,15 @@ class Block:
             for x, y in self.squares:
                 next_y = self.y + y - 1
                 next_x = self.x + x
-                if next_y < 0 or game.board[next_y][next_x]:
+                if next_y < 0 or window.board[next_y][next_x]:
                     will_hit = True
 
-            game.update(0)
+            window.update(0)
             if will_hit:
                 break
 
-        pyglet.clock.unschedule(game.update)
-        pyglet.clock.schedule_interval(game.update, 1 / FPS)
+        pyglet.clock.unschedule(window.update)
+        pyglet.clock.schedule_interval(window.update, 1 / FPS)
 
 
 class BlockFactory:
@@ -206,7 +206,7 @@ class EndScreen:
             self.name_label.text += text
 
 
-class Game:
+class Window(pyglet.window.Window):
     block_factory: BlockFactory
 
     active_block: Block
@@ -224,6 +224,8 @@ class Game:
     end_screen: Optional[EndScreen]
 
     def __init__(self):
+        super().__init__(width=BLOCK_SIZE * (COLUMNS + RIGHT_OFFSET),
+                         height=BLOCK_SIZE * ROWS)
         self.block_factory = BlockFactory()
         self.active_block = self.block_factory.create_random_block()
         self.next_block = self.block_factory.create_random_block()
@@ -238,7 +240,9 @@ class Game:
                                              font_size=20)
         self.end_screen = None
 
-    def draw(self):
+    def on_draw(self):
+        self.clear()
+
         if self.end_screen is None:
             for y, row in enumerate(self.board):
                 for x, color in enumerate(row):
@@ -282,6 +286,8 @@ class Game:
             self.active_block.rotate(False)
         elif key == pyglet.window.key.C:
             self.save_block()
+        elif key == pyglet.window.key.ESCAPE:
+            self.close()
 
     def on_text(self, text):
         if self.end_screen:
@@ -353,32 +359,10 @@ class Game:
             self.active_block = temp
             self.swapped = True
 
-
-game = Game()
-
-# Game window
-window = pyglet.window.Window(width=BLOCK_SIZE * (COLUMNS + RIGHT_OFFSET),
-                              height=BLOCK_SIZE * ROWS)
-
-pyglet.clock.schedule_interval(game.update, 1 / FPS)
+    def run(self):
+        pyglet.clock.schedule_interval(window.update, 1 / FPS)
+        pyglet.app.run()
 
 
-# Events handlers
-@window.event
-def on_draw():
-    window.clear()
-    game.draw()
-
-
-@window.event
-def on_key_press(key, mod):
-    game.on_key_press(key, mod)
-
-
-@window.event
-def on_text(text):
-    game.on_text(text)
-
-
-# Run the game
-pyglet.app.run()
+window = Window()
+window.run()
