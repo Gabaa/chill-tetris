@@ -137,8 +137,8 @@ class Screen:
     def on_key_press(self, key, mod) -> bool:
         raise NotImplementedError
 
-    def on_text(self, text) -> bool:
-        raise NotImplementedError
+    def on_text(self, text):
+        pass
 
 
 class GameScreen(Screen):
@@ -205,9 +205,6 @@ class GameScreen(Screen):
             self.save_block()
         elif key == pyglet.window.key.ESCAPE:
             return False
-        return True
-
-    def on_text(self, text) -> bool:
         return True
 
     def update(self, dt):
@@ -317,11 +314,13 @@ class GameScreen(Screen):
 
 
 class EndScreen(Screen):
+    score: int
     score_label: pyglet.text.Label
     enter_name_label: pyglet.text.Label
     name_label: pyglet.text.Label
 
     def __init__(self, window, score):
+        self.score = score
         self.score_label = pyglet.text.Label(f'Score: {score}',
                                              x=window.width // 2,
                                              y=window.height * 0.7,
@@ -347,17 +346,17 @@ class EndScreen(Screen):
         self.enter_name_label.draw()
         self.name_label.draw()
 
-    def on_key_press(self, key, mod):
+    def on_key_press(self, key, mod) -> bool:
         if key == pyglet.window.key.BACKSPACE:
             self.name_label.text = self.name_label.text[:-1]
         elif key == pyglet.window.key.ENTER:
-            write_score_to_file(self.name_label.text)
-            pyglet.app.exit()
+            write_score_to_file(self.name_label.text, self.score)
+            return False
+        return True
 
     def on_text(self, text):
         if text.lower() in 'abcdefghijklmnopqrstuvwxyzæøå':
             self.name_label.text += text
-        return True
 
     def update(self, dt):
         pass
@@ -382,9 +381,7 @@ class Window(pyglet.window.Window):
             self.close()
 
     def on_text(self, text):
-        keep_running: bool = self.active_screen.on_text(text)
-        if not keep_running:
-            self.close()
+        self.active_screen.on_text(text)
 
     def run(self):
         pyglet.clock.schedule_interval(self.active_screen.update, 1 / FPS)
