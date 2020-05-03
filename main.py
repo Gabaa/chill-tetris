@@ -1,8 +1,8 @@
+import datetime
+import random
 from typing import *
 
 import pyglet
-import random
-import datetime
 
 BLOCK_SIZE = 30
 ROWS = 20
@@ -11,6 +11,8 @@ COLUMNS = 10
 RIGHT_OFFSET = 7
 
 FPS = 2
+
+Color = Tuple[int, int, int]
 
 
 def draw_rect(x, y, color):
@@ -23,7 +25,7 @@ def draw_rect(x, y, color):
                          ('c3B', color * 4))
 
 
-def draw_gridline(startpoint, endpoint):
+def draw_grid_line(startpoint, endpoint):
     x0, y0 = startpoint
     x1, y1 = endpoint
 
@@ -34,15 +36,15 @@ def draw_gridline(startpoint, endpoint):
 
 def draw_grid():
     for x in range(1, COLUMNS + 1):
-        draw_gridline((x * BLOCK_SIZE, 0), (x * BLOCK_SIZE, BLOCK_SIZE * ROWS))
+        draw_grid_line((x * BLOCK_SIZE, 0), (x * BLOCK_SIZE, BLOCK_SIZE * ROWS))
 
     for y in range(1, ROWS):
-        draw_gridline((0, y * BLOCK_SIZE), (BLOCK_SIZE * COLUMNS, y * BLOCK_SIZE))
+        draw_grid_line((0, y * BLOCK_SIZE), (BLOCK_SIZE * COLUMNS, y * BLOCK_SIZE))
 
 
-def write_score_to_file(name):
+def write_score_to_file(name, score):
     with open('highscores.txt', 'a') as f:
-        print(datetime.datetime.now(), name, window.rows_cleared, file=f)
+        print(datetime.datetime.now(), name, score, file=f)
 
 
 class Block:
@@ -62,44 +64,6 @@ class Block:
         x = COLUMNS // 2 - 1
         y = ROWS - max(ylist) - 1
         return x, y
-
-    def rotate(self, clockwise: bool):
-        # get squares after rotation
-        new_squares = []
-
-        for x, y in self.squares:
-            if clockwise:
-                new_squares.append((y, -x))
-            else:
-                new_squares.append((-y, x))
-
-        # check if all squares are now inside
-        all_inside = True
-        for x, y in new_squares:
-            new_x = self.x + x
-            new_y = self.y + y
-            if not (0 <= new_x < COLUMNS and 0 <= new_y < ROWS and not window.board[new_y][new_x]):
-                all_inside = False
-
-        # if they are inside, set as the new block
-        if all_inside:
-            self.squares = new_squares
-
-    def drop(self):
-        will_hit = False
-        while True:
-            for x, y in self.squares:
-                next_y = self.y + y - 1
-                next_x = self.x + x
-                if next_y < 0 or window.board[next_y][next_x]:
-                    will_hit = True
-
-            window.update(0)
-            if will_hit:
-                break
-
-        pyglet.clock.unschedule(window.update)
-        pyglet.clock.schedule_interval(window.update, 1 / FPS)
 
 
 class BlockFactory:
@@ -163,69 +127,33 @@ class BlockFactory:
         return Block(self.blocks[i], self.colors[i])
 
 
-class EndScreen:
-    score_label: pyglet.text.Label
-    enter_name_label: pyglet.text.Label
-    name_label: pyglet.text.Label
-
-    def __init__(self, window, endscore):
-        self.score_label = pyglet.text.Label(f'Score: {endscore}',
-                                             x=window.width // 2,
-                                             y=window.height * 0.7,
-                                             anchor_x='center',
-                                             anchor_y='center',
-                                             font_size=20)
-
-        self.enter_name_label = pyglet.text.Label('ENTER YOUR NAME',
-                                                  x=window.width // 2,
-                                                  y=window.height * 0.8,
-                                                  anchor_x='center',
-                                                  anchor_y='center',
-                                                  font_size=20)
-        self.name_label = pyglet.text.Label('',
-                                            x=window.width // 2,
-                                            y=window.height * 0.5,
-                                            anchor_x='center',
-                                            anchor_y='center',
-                                            font_size=20)
-
+class Screen:
     def draw(self):
-        self.score_label.draw()
-        self.enter_name_label.draw()
-        self.name_label.draw()
+        raise NotImplementedError
 
-    def on_key_press(self, key, mod):
-        if key == pyglet.window.key.BACKSPACE:
-            self.name_label.text = self.name_label.text[:-1]
-        elif key == pyglet.window.key.ENTER:
-            write_score_to_file(self.name_label.text)
-            pyglet.app.exit()
+    def update(self, dt):
+        raise NotImplementedError
 
-    def on_text(self, text):
-        if text.lower() in 'abcdefghijklmnopqrstuvwxyzæøå':
-            self.name_label.text += text
+    def on_key_press(self, key, mod) -> bool:
+        raise NotImplementedError
+
+    def on_text(self, text) -> bool:
+        raise NotImplementedError
 
 
-class Window(pyglet.window.Window):
+class GameScreen(Screen):
+    window: 'Window'
     block_factory: BlockFactory
-
     active_block: Block
-
     next_block: Block
-
     swap_block: Block
     swapped: bool
-
-    board: List[List[Optional[Tuple[int, int, int]]]]
-
+    board: List[List[Optional[Color]]]
     rows_cleared: int
     score_label: pyglet.text.Label
 
-    end_screen: Optional[EndScreen]
-
-    def __init__(self):
-        super().__init__(width=BLOCK_SIZE * (COLUMNS + RIGHT_OFFSET),
-                         height=BLOCK_SIZE * ROWS)
+    def __init__(self, window: 'Window'):
+        self.window = window
         self.block_factory = BlockFactory()
         self.active_block = self.block_factory.create_random_block()
         self.next_block = self.block_factory.create_random_block()
@@ -238,60 +166,49 @@ class Window(pyglet.window.Window):
                                              y=BLOCK_SIZE * (ROWS - 3),
                                              anchor_x='center', anchor_y='center',
                                              font_size=20)
-        self.end_screen = None
 
-    def on_draw(self):
-        self.clear()
+    def draw(self):
+        for y, row in enumerate(self.board):
+            for x, color in enumerate(row):
+                if color is not None:
+                    draw_rect(x, y, color)
 
-        if self.end_screen is None:
-            for y, row in enumerate(self.board):
-                for x, color in enumerate(row):
-                    if color is not None:
-                        draw_rect(x, y, color)
+        for x, y in self.active_block.squares:
+            draw_rect(x + self.active_block.x, y + self.active_block.y, self.active_block.color)
 
-            for x, y in self.active_block.squares:
-                draw_rect(x + self.active_block.x, y + self.active_block.y, self.active_block.color)
+        if self.swap_block:
+            for x, y in self.swap_block.squares:
+                draw_rect(COLUMNS + x + 3, y + 4, self.swap_block.color)
 
-            if self.swap_block:
-                for x, y in self.swap_block.squares:
-                    draw_rect(COLUMNS + x + 3, y + 4, self.swap_block.color)
+        for x, y in self.next_block.squares:
+            draw_rect(COLUMNS + x + 3, y + 10, self.next_block.color)
 
-            for x, y in self.next_block.squares:
-                draw_rect(COLUMNS + x + 3, y + 10, self.next_block.color)
+        # draw grid
+        draw_grid()
 
-            # draw grid
-            draw_grid()
+        self.score_label.draw()
 
-            self.score_label.draw()
-
-        else:
-            self.end_screen.draw()
-
-    def on_key_press(self, key, mod):
-        if self.end_screen:
-            self.end_screen.on_key_press(key, mod)
-            return
-
+    def on_key_press(self, key, mod) -> bool:
         if key == pyglet.window.key.LEFT:
             self.move_block(-1)
         elif key == pyglet.window.key.RIGHT:
             self.move_block(1)
         elif key == pyglet.window.key.UP:
-            self.active_block.rotate(True)
+            self.rotate_block(True)
         elif key == pyglet.window.key.DOWN:
             self.update(0)
         elif key == pyglet.window.key.SPACE:
-            self.active_block.drop()
+            self.drop_block()
         elif key == pyglet.window.key.X:
-            self.active_block.rotate(False)
+            self.rotate_block(False)
         elif key == pyglet.window.key.C:
             self.save_block()
         elif key == pyglet.window.key.ESCAPE:
-            self.close()
+            return False
+        return True
 
-    def on_text(self, text):
-        if self.end_screen:
-            self.end_screen.on_text(text)
+    def on_text(self, text) -> bool:
+        return True
 
     def update(self, dt):
         hit = False
@@ -326,7 +243,7 @@ class Window(pyglet.window.Window):
         self.score_label.text = f'Score: {self.rows_cleared}'
 
     def end_game(self):
-        self.end_screen = EndScreen(window, self.rows_cleared)
+        self.window.active_screen = EndScreen(window, self.rows_cleared)
         pyglet.clock.unschedule(self.update)
 
     def move_block(self, dx):
@@ -359,10 +276,121 @@ class Window(pyglet.window.Window):
             self.active_block = temp
             self.swapped = True
 
+    def drop_block(self):
+        pyglet.clock.unschedule(self.update)
+
+        will_hit = False
+        while True:
+            for x, y in self.active_block.squares:
+                next_y = self.active_block.y + y - 1
+                next_x = self.active_block.x + x
+                if next_y < 0 or self.board[next_y][next_x]:
+                    will_hit = True
+
+            self.update(0)
+            if will_hit:
+                break
+
+        pyglet.clock.schedule_interval(self.update, 1 / FPS)
+
+    def rotate_block(self, clockwise: bool):
+        # get squares after rotation
+        new_squares = []
+
+        for x, y in self.active_block.squares:
+            if clockwise:
+                new_squares.append((y, -x))
+            else:
+                new_squares.append((-y, x))
+
+        # check if all squares are now inside
+        all_inside = True
+        for x, y in new_squares:
+            new_x = self.active_block.x + x
+            new_y = self.active_block.y + y
+            if not (0 <= new_x < COLUMNS and 0 <= new_y < ROWS and not self.board[new_y][new_x]):
+                all_inside = False
+
+        # if they are inside, set as the new block
+        if all_inside:
+            self.active_block.squares = new_squares
+
+
+class EndScreen(Screen):
+    score_label: pyglet.text.Label
+    enter_name_label: pyglet.text.Label
+    name_label: pyglet.text.Label
+
+    def __init__(self, window, score):
+        self.score_label = pyglet.text.Label(f'Score: {score}',
+                                             x=window.width // 2,
+                                             y=window.height * 0.7,
+                                             anchor_x='center',
+                                             anchor_y='center',
+                                             font_size=20)
+
+        self.enter_name_label = pyglet.text.Label('ENTER YOUR NAME',
+                                                  x=window.width // 2,
+                                                  y=window.height * 0.8,
+                                                  anchor_x='center',
+                                                  anchor_y='center',
+                                                  font_size=20)
+        self.name_label = pyglet.text.Label('',
+                                            x=window.width // 2,
+                                            y=window.height * 0.5,
+                                            anchor_x='center',
+                                            anchor_y='center',
+                                            font_size=20)
+
+    def draw(self):
+        self.score_label.draw()
+        self.enter_name_label.draw()
+        self.name_label.draw()
+
+    def on_key_press(self, key, mod):
+        if key == pyglet.window.key.BACKSPACE:
+            self.name_label.text = self.name_label.text[:-1]
+        elif key == pyglet.window.key.ENTER:
+            write_score_to_file(self.name_label.text)
+            pyglet.app.exit()
+
+    def on_text(self, text):
+        if text.lower() in 'abcdefghijklmnopqrstuvwxyzæøå':
+            self.name_label.text += text
+        return True
+
+    def update(self, dt):
+        pass
+
+
+class Window(pyglet.window.Window):
+    active_screen: Screen
+
+    def __init__(self):
+        super().__init__(width=BLOCK_SIZE * (COLUMNS + RIGHT_OFFSET),
+                         height=BLOCK_SIZE * ROWS)
+
+        self.active_screen = GameScreen(self)
+
+    def on_draw(self):
+        self.clear()
+        self.active_screen.draw()
+
+    def on_key_press(self, key, mod):
+        keep_running: bool = self.active_screen.on_key_press(key, mod)
+        if not keep_running:
+            self.close()
+
+    def on_text(self, text):
+        keep_running: bool = self.active_screen.on_text(text)
+        if not keep_running:
+            self.close()
+
     def run(self):
-        pyglet.clock.schedule_interval(window.update, 1 / FPS)
+        pyglet.clock.schedule_interval(self.active_screen.update, 1 / FPS)
         pyglet.app.run()
 
 
-window = Window()
-window.run()
+if __name__ == '__main__':
+    window = Window()
+    window.run()
